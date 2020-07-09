@@ -27,7 +27,7 @@ def db_setup(app):
 #----------------------------------------------------------------------------#
 
 class Venue(db.Model):
-    __tablename__ = 'Venue'
+    __tablename__ = 'venue'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
@@ -56,8 +56,28 @@ class Venue(db.Model):
         self.website = website
         self.description = description
 
+
+#venues method
+    def get_venue_details(self):
+        return{
+            'id' :self.id,
+            'name' :self.name,
+            'genres' : self.genres,
+            'address' :self.address,
+            'city' :self.city,
+            'phone' :self.phone,
+            'website' :self.website,
+            'facebook_link':self.facebook_link,
+            'seeking_talent' :self.seeking_talent,
+            'description' :self.description,
+            'image-link' :self.image_link
+        }
+
+
+
+
 class Artist(db.Model):
-    __tablename__ = 'Artist'
+    __tablename__ = 'artist'
     
 
     id = Column(Integer, primary_key=True)
@@ -65,7 +85,7 @@ class Artist(db.Model):
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
+    genres = db.Column(ARRAY(String))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     seeking_venue = db.Column(db.Boolean, default=False)
@@ -86,10 +106,10 @@ class Artist(db.Model):
         self.facebook_link = facebook_link
         self.seeking_description = seeking_description
         self.image_link = image_link
-        
+
 class Show(db.Model):
 
-    __tablename__ = 'Show'
+    __tablename__ = 'show'
     id = db.Column(Integer,primary_key=True)
     venue_id = db.Column(Integer, ForeignKey(Venue.id), nullable=False)
     artist_id = db.Column(Integer, ForeignKey(Artist.id), nullable=False)
