@@ -363,66 +363,73 @@ def show_artist(artist_id):
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
   form = ArtistForm()
-  artist={
-    "id": 4,
-    "name": "Guns N Petals",
-    "genres": ["Rock n Roll"],
-    "city": "San Francisco",
-    "state": "CA",
-    "phone": "326-123-5000",
-    "website": "https://www.gunsnpetalsband.com",
-    "facebook_link": "https://www.facebook.com/GunsNPetals",
-    "seeking_venue": True,
-    "seeking_description": "Looking for shows to perform at in the San Francisco Bay Area!",
-    "image_link": "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
-  }
+  
+  selected_artist = Artist.query.get(artist_id)
+
+  form.name.data = selected_artist.name
+  form.genres.data = selected_artist.genres
+  form.city.data = selected_artist.city  
+  form.state.data = selected_artist.state
+  form.phone.data = selected_artist.phone
+  form.facebook_link.data = selected_artist.facebook_link
+  form.seeking_venue.data = True
+  form.seeking_description.data = selected_artist.seeking_description
+  form.image_link.data = "https://images.unsplash.com/photo-1549213783-8284d0336c4f?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=300&q=80"
+
+  print(selected_artist.genres)  
+
   # TODO: populate form with fields from artist with ID <artist_id>
-  return render_template('forms/edit_artist.html', form=form, artist=artist)
+  return render_template('forms/edit_artist.html', form=form, artist=selected_artist)
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
   # TODO: take values from the form submitted, and update existing
   # artist record with ID <artist_id> using the new attributes
+  form = ArtistForm()
+
+  try:
+    
+    edited_artist = Artist.query.get(artist_id)
+    edited_artist.name = form.name.data
+    edited_artist.genres = form.genres.data
+    edited_artist.city = form.city.data
+    edited_artist.state = form.state.data
+    edited_artist.phone = form.phone.data
+    edited_artist.facebook_link = form.facebook_link.data
+    edited_artist.image_link = form.image_link.data
+    edit_artist.seeking_description = form.seeking_description.data
+    edit_artist.seeking_venue = form.seeking_venue.data
+
+
+  
+    db.session.add(edited_artist)
+    db.session.commit()
+    # on successful db insert, flash success
+    flash('Artist ' + request.form['name'] + ' was successfully edited!')
+  except SQLAlchemyError as e:
+    print(e)
+    db.session.rollback()
+    flash('An error occured when editing artist.')
+  finally:
+    db.session.close()
+
 
   return redirect(url_for('show_artist', artist_id=artist_id))
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
   form = VenueForm()
-  selected_venue= Venue.query.get(venue_id)
-  
+  selected_venue = Venue.query.get(venue_id)
+
   form.name.data = selected_venue.name
-  form.genres.data = selected_venue.genres,
-  form.city.data = selected_venue.city,
-  form.state.data = selected_venue.state,
-  form.phone.data = selected_venue.phone,
-  form.facebook_link.data = selected_venue.facebook_link,
+  form.genres.data = selected_venue.genres
+  form.city.data = selected_venue.city
+  form.address.data = selected_venue.address
+  form.state.data = selected_venue.state
+  form.phone.data = selected_venue.phone
+  form.facebook_link.data = selected_venue.facebook_link  
 
-  flash('city: {}'.format(selected_venue.city))
-  flash('phone: {}'.format(selected_venue.phone))
-  venue={
-    "id": selected_venue.id,
-    "name": selected_venue.name,
-    "genres": selected_venue.genres,
-    "city": selected_venue.city,
-    "state": selected_venue.state,
-    "phone": selected_venue.phone,
-    "website": selected_venue.website,
-    "facebook_link": selected_venue.facebook_link,
-    "seeking_venue": True,
-    "description": selected_venue.description,
-    "image_link": selected_venue.image_link,
-    "past_shows": [{
-      "venue_id": 1,
-      "venue_name": "The Musical Hop",
-      "venue_image_link": "https://images.unsplash.com/photo-1543900694-133f37abaaa5?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60",
-      "start_time": "2019-05-21T21:30:00.000Z"
-    }],
-    "upcoming_shows": [],
-    "upcoming_shows_count": 0,
-  }
-
-
+  print(form.genres.data)
   # TODO: populate form with values from venue with ID <venue_id>
   return render_template('forms/edit_venue.html', form=form, venue=selected_venue)
 
@@ -434,12 +441,12 @@ def edit_venue_submission(venue_id):
   try:
     
     edited_venue = Venue.query.get(venue_id)
-    edited_venue.name = form.name.data,
-    edited_venue.genres = form.genres.data,
-    edited_venue.city = form.city.data,
-    edited_venue.state = form.state.data,
-    edited_venue.phone = form.phone.data,
-    edited_venue.facebook_link = form.facebook_link.data,
+    edited_venue.name = form.name.data
+    edited_venue.genres = form.genres.data
+    edited_venue.city = form.city.data
+    edited_venue.state = form.state.data
+    edited_venue.phone = form.phone.data
+    edited_venue.facebook_link = form.facebook_link.data
     edited_venue.image_link = form.image_link.data
   
     db.session.add(edited_venue)
