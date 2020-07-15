@@ -10,6 +10,8 @@
 				<h5>{{ artist.name }}</h5>
 			</div>
 		</a>
+		<a href="/artists/{{artist.id}}/edit"><button class="fas fa-edit" id="{{ artist.id }}"></button></a>
+		<a href="/artists/{{artist.id}}/delete"><button class="del-btn" id="{{ artist.id }}">&cross;</button></a>			
 	</li>
 	{% endfor %}
 </ul>

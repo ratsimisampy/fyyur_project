@@ -12,8 +12,12 @@
 					<h5>{{ venue.name }}</h5>
 				</div>
 			</a>
+			<a href="/venues/{{venue.id}}/edit"><button class="fas fa-edit" id="{{ venue.id }}"></button></a>
+			<a href="/venues/{{venue.id}}">delete</a>			
 		</li>
 		{% endfor %}
-	</ul>
+	</ul>	
 {% endfor %}
+
 {% endblock %}
+

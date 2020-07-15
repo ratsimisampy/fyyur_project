@@ -56,26 +56,6 @@ class Venue(db.Model):
         self.website = website
         self.description = description
 
-
-#venues method
-    def get_venue_details(self):
-        return{
-            'id' :self.id,
-            'name' :self.name,
-            'genres' : self.genres,
-            'address' :self.address,
-            'city' :self.city,
-            'phone' :self.phone,
-            'website' :self.website,
-            'facebook_link':self.facebook_link,
-            'seeking_talent' :self.seeking_talent,
-            'description' :self.description,
-            'image-link' :self.image_link
-        }
-
-
-
-
 class Artist(db.Model):
     __tablename__ = 'artist'
     
