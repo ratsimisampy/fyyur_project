@@ -10,5 +10,7 @@ DEBUG = True
 
 
 # TODO IMPLEMENT DATABASE URL
-
+# this connection string works for me
 SQLALCHEMY_DATABASE_URI = 'postgresql:///fyyur'
+# although you ask for a valid one which looks like more like ...
+# SQLALCHEMY_DATABASE_URI = 'postgresql://udacitystudios@localhost:5432/example'

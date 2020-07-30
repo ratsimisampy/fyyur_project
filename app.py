@@ -57,50 +57,111 @@ def index():
 #  Venues
 #  ----------------------------------------------------------------
 
+# ---------------!!!!!!--------------------
+def get_dict_list_from_result(result):
+  '''Converts SQLALchemy Collections Results to Dict
+  * Input: sqlalchemy.util._collections.result
+  * Output: Result as list
+  Source: https://stackoverflow.com/questions/48232222/how-to-deal-with-sqlalchemy-util-collections-result
+  Used in following Views:
+    - /venues
+  '''
+  list_dict = []
+  for i in result:
+      i_dict = i._asdict()  
+      list_dict.append(i_dict)
+  return list_dict
+  # ---------------!!!!!!--------------------
+
 @app.route('/venues')
 def venues():
   # TODO: replace with real venues data.
   #       num_shows should be aggregated based on number of upcoming shows per venue.
 
+  current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+  # SQL statement equivalent: SELECT city, state from Venue group by (city, state) order by city, state
+  venue_query = db.session.query(Venue.city,Venue.state ).\
+                     group_by(Venue.city, Venue.state).order_by(Venue.city, Venue.state).all()
   
-  data=[]
-  #venues = Venue.query.all()
-  # get cities and states distinct pairs
-  cities_states = db.session.query(Venue.city,Venue.state).distinct()
-  print(cities_states.all())
-  # for each unique pair, 
-  for pairs in cities_states:
-    print(pairs)
-    #get the corresponding venues, 
-    venues = db.session.query(Venue).filter(Venue.city == pairs.city, Venue.state == pairs.state)
-    print(venues.all())
-    #then add these venues to data dictionnary      
+                    
+  city_state = ''
+  data = []
 
-    for venue in venues:
+  
+  for venue in venue_query:
+    print(venue.city + venue.state, venue)
+    #get venues having the same city-state
+    # for more details: db.session.query(Venue.id,Venue.name, Show.start_time, Show.artist_id).\
+    #SQL equivalent: SELECT Id, name from Venue where city = --identified city-- and Venue.state = --identifyed state--
+    venues_in_current_cityState = db.session.query(Venue.id, Venue.name).\
+                                          filter(Venue.city == venue.city,
+                                                    Venue.state == venue.state).all()                                                      
+    
+    listOf_venues_in_current_cityState = get_dict_list_from_result(venues_in_current_cityState)                                                      
 
-      data.append({
-        "city" : venue.city ,
-        "state" : venue.state ,
-        "venues" : [{
-          "id" : venue.id,
-          "name" : venue.name 
-        }]
-      })
-      print('venue: {}, added'.format(venue.name))
+    #print(listOf_venues_in_current_cityState[0]['name'])                                         
+    print('venues: {} '.format(venues_in_current_cityState))
+    #SQL equivalent: SELECT count(Venue.name) from Venue 
+    #                                     INNER JOIN Show on Show.Id = Venue.Id
+    #                                     where city = --current identifyed city-- 
+    #                                             and state = --current identifyed state--
+    #                                             and Show.start_time > current_time
+    upcoming_shows = db.session.query(db.func.count(Venue.name)).\
+                                          filter(Venue.city == venue.city,
+                                                    Venue.state == venue.state).\
+                                                      join(Venue.shows).\
+                                                        filter(Show.start_time > current_time).\
+                                                          all()                                       
+    print('upcoming_shows: {} '.format(upcoming_shows))
+    #the 1st time, this if condition will be skipped because city_state == ''
+    if city_state == venue.city + venue.state: 
+      # ignore city and state, take venues details only
+      if listOf_venues_in_current_cityState:
+        i = 0
+        for l in listOf_venues_in_current_cityState:          
+          data[len(data) - 1]["venues"].append({
+            "id": listOf_venues_in_current_cityState[i]['id'],
+            "name": listOf_venues_in_current_cityState[i]['name'],
+            "num_upcoming_show": upcoming_shows
+          })
+          i = i + 1
+    else:
+      city_state = venue.city + venue.state
+      if listOf_venues_in_current_cityState:
+        i = 0
+        locations = []
+        for l in listOf_venues_in_current_cityState: 
+          locations.append({                     
+            "id": listOf_venues_in_current_cityState[i]['id'],
+            "name": listOf_venues_in_current_cityState[i]['name'],
+            "num_upcoming_shows": upcoming_shows            
+          })
+          i = i + 1
+        data.append({
+            "city": venue.city,
+            "state": venue.state,
+            "venues": locations
+        })
+    
   return render_template('pages/venues.html', areas=data);
 
 @app.route('/venues/search', methods=['POST'])
 def search_venues():
-  # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
+  # TODO done: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for Hop should return "The Musical Hop".
   # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-  response={
-    "count": 1,
-    "data": [{
-      "id": 2,
-      "name": "The Dueling Pianos Bar",
-      "num_upcoming_shows": 0,
-    }]
+  search_term = request.form.get('search_term', '')
+  data = Venue.query.filter(Venue.name.ilike('%{}%'.format(search_term))).all()
+  count = []
+  for result in data:
+    count.append({
+      "id":result.id,
+      "name": result.name      
+    })
+  response = {
+    "count":len(data),
+    "data": count
   }
   return render_template('pages/search_venues.html', results=response, search_term=request.form.get('search_term', ''))
 
@@ -109,12 +170,17 @@ def show_venue(venue_id):
   # shows the venue page with the given venue_id
   # TODO done: ... using JOIN query 
   
+  #SQL statement equivalent: SELECT * from Venue WHERE id = venue_id
   selected_venue = Venue.query.get(venue_id)
   past_shows = []
   upcoming_shows = []
-  
+
+  #SQL statement equivalent: SELECT Show.* from Show INNER JOIN Venue ON Show.Id = Venue.Id
+  #                                             INNER JOIN Artist ON Show.Id = Artist.Id 
+  #                                             WHERE Venue.Id == venue_id       
   shows = db.session.query(Show).\
                         join(Venue).\
+                          filter(Venue.id == venue_id).\
                           join(Artist)
 
 
@@ -127,7 +193,7 @@ def show_venue(venue_id):
      "artist_name": Artist.query.filter_by(id=show.artist_id).first().name,
      "artist_image_link":Venue.query.filter_by(id=show.venue_id).first().image_link ,
      "start_time": str(show.start_time) })
-
+      print('past shows: {}'.format(past_shows))
     else:
 
       upcoming_shows.append({
@@ -135,7 +201,7 @@ def show_venue(venue_id):
       "artist_name": Artist.query.filter_by(id=show.artist_id).first().name,
       "artist_image_link":Venue.query.filter_by(id=show.venue_id).first().image_link ,
       "start_time": show.start_time })
-
+      print('upcoming shows: {} '.format(upcoming_shows))
   data = {
     "id": selected_venue.id,
     "name": selected_venue.name,
@@ -286,7 +352,7 @@ def delete_venue(venue_id):
 #  ----------------------------------------------------------------
 @app.route('/artists')
 def artists():
-  # TODO: replace with real data returned from querying the database
+  # TODO done: replace with real data returned from querying the database
   data = []
   artists = Artist.query.all()
 
@@ -303,14 +369,21 @@ def search_artists():
   # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
   # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
   # search for "band" should return "The Wild Sax Band".
-  response={
-    "count": 1,
-    "data": [{
-      "id": 4,
-      "name": "Guns N Petals",
-      "num_upcoming_shows": 0,
-    }]
+  
+
+  search_term = request.form.get('search_term', '')
+  data = Artist.query.filter(Artist.name.ilike('%{}%'.format(search_term))).all()
+  count = []
+  for result in data:
+    count.append({
+      "id":result.id,
+      "name": result.name      
+    })
+  response = {
+    "count":len(data),
+    "data": count
   }
+
   return render_template('pages/search_artists.html', results=response, search_term=request.form.get('search_term', ''))
 
 @app.route('/artists/<int:artist_id>')
@@ -318,15 +391,18 @@ def show_artist(artist_id):
   # shows the venue page with the given venue_id
   # TODO done: using JOIN query
 
+  #SQL statement equivalent: SELECT * from Artist where Artist.Id = artist_id
   selected_artist = Artist.query.get(artist_id)
   past_shows = []
   upcoming_shows = []
   
-  shows = db.session.query(Show).\
-                        join(Venue).\
-                          join(Artist)
-
-
+  #SQL statement equivalent: SELECT Show.* from Show
+  #                                           INNER JOIN Venue ON Show.Id = Venue.Id
+  #                                           INNER JOIN Show.Id = Artist.Id 
+  #                                           WHERE Artist.Id = artist_id
+  #                                             
+  shows = Show.query.filter_by(artist_id = artist_id).join(Artist).join(Venue)                                
+                          
   for show in shows:
 
     if show.start_time < str(datetime.now()):
@@ -362,6 +438,8 @@ def show_artist(artist_id):
     "past_shows_count": len(past_shows),
     "upcoming_shows_count": len(upcoming_shows),
   }
+  print(data)
+
   return render_template('pages/show_artist.html', artist=data)
 
 #  Update artist
@@ -394,7 +472,7 @@ def edit_artist_submission(artist_id):
   form = ArtistForm()
 
   try:
-    
+    flash('hello try...{}'.format(form.phone))
     edited_artist = Artist.query.get(artist_id)
     edited_artist.name = form.name.data
     edited_artist.genres = form.genres.data
@@ -406,7 +484,7 @@ def edit_artist_submission(artist_id):
     edit_artist.seeking_description = form.seeking_description.data
     edit_artist.seeking_venue = form.seeking_venue.data
 
-
+    flash('edited_artist')
   
     db.session.add(edited_artist)
     db.session.commit()
